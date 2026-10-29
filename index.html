@@ -1,4 +1,9 @@
-<title>Hokie GPA Calculator</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QCA Calc</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Unofficial Virginia Tech GPA (QCA) calculator: semester GPA, cumulative GPA, Dean's List and Latin honors check, target GPA planner, and final exam grade calculator using VT's plus/minus scale.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -262,12 +267,14 @@ footer p { margin: 0 0 6px; max-width: 80ch; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
+</head>
+<body>
 
 <div class="wrap">
   <header class="top">
     <div class="eyebrow"><span>Unofficial</span><span class="tag">Virginia Tech scale</span><span class="tag">QCA = GPA</span></div>
-    <h1>Hokie GPA <span class="q">(QCA)</span> Calculator</h1>
-    <p class="lede">Semester GPA, cumulative GPA, Dean's List and graduation honors, the term GPA you need to hit a goal, and the score you need on your final. Built on VT's plus/minus scale with no A+, where repeated courses count every time.</p>
+    <h1>QCA <span class="q">Calc</span></h1>
+    <p class="lede">A GPA calculator for Virginia Tech students. Semester GPA, cumulative GPA, Dean's List and graduation honors, the term GPA you need to hit a goal, and the score you need on your final. Built on VT's plus/minus scale with no A+, where repeated courses count every time.</p>
     <nav class="tabs" aria-label="Calculators">
       <a href="#semester" data-tab="semester"><span class="n">01</span>Semester GPA</a>
       <a href="#cumulative" data-tab="cumulative"><span class="n">02</span>Cumulative</a>
@@ -587,7 +594,7 @@ footer p { margin: 0 0 6px; max-width: 80ch; }
   function $(id) { return document.getElementById(id); }
 
   // ---------- State ----------
-  var KEY = "hokie-gpa-v1";
+  var KEY = "qca-calc-v1";
   var EXAMPLE_COURSES = [
     { name: "ENGL 1105 First-Year Writing", credits: 3, grade: "A-" },
     { name: "MATH 1225 Calculus of a Single Variable", credits: 4, grade: "B+" },
@@ -1024,3 +1031,6 @@ footer p { margin: 0 0 6px; max-width: 80ch; }
   showTab(); updateAll();
 })();
 </script>
+
+</body>
+</html>
