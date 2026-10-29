@@ -1,0 +1,1026 @@
+<title>Hokie GPA Calculator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Unofficial Virginia Tech GPA (QCA) calculator: semester GPA, cumulative GPA, Dean's List and Latin honors check, target GPA planner, and final exam grade calculator using VT's plus/minus scale.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: transcript-ledger tool. Header band, tab strip, then input column + sticky result card (stacks on phones). */
+:root {
+  --bg: #eceff2;
+  --surface: #ffffff;
+  --surface-2: #f5f7f9;
+  --ink: #17212c;
+  --muted: #5a6776;
+  --line: #d3d9e0;
+  --accent: #a8481b;
+  --accent-soft: #f6e4d9;
+  --accent-ink: #ffffff;
+  --good: #23704a;
+  --good-soft: #dcefe4;
+  --warn: #8a6100;
+  --warn-soft: #f6ebcc;
+  --bad: #a8261d;
+  --bad-soft: #f6dcd9;
+  --focus: #2b62c4;
+
+  --f-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --r: 10px;
+  --r-sm: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141a; --surface: #172029; --surface-2: #1c2631; --ink: #e6ebf0; --muted: #94a2b1;
+    --line: #2b3744; --accent: #e5793f; --accent-soft: #3a2418; --accent-ink: #16100c;
+    --good: #5cc28b; --good-soft: #15301f; --warn: #e2b54a; --warn-soft: #33290f;
+    --bad: #f07a70; --bad-soft: #3a1915; --focus: #7aa7ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141a; --surface: #172029; --surface-2: #1c2631; --ink: #e6ebf0; --muted: #94a2b1;
+  --line: #2b3744; --accent: #e5793f; --accent-soft: #3a2418; --accent-ink: #16100c;
+  --good: #5cc28b; --good-soft: #15301f; --warn: #e2b54a; --warn-soft: #33290f;
+  --bad: #f07a70; --bad-soft: #3a1915; --focus: #7aa7ff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 1080px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.num, input[type=number], .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+/* Header */
+header.top { padding-block: 28px 10px; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+}
+.eyebrow .tag { border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; }
+h1 {
+  font-family: var(--f-display); font-stretch: 85%; font-weight: 850;
+  font-size: clamp(34px, 6.4vw, 60px); line-height: .95; letter-spacing: -.01em;
+  margin: 12px 0 10px; text-wrap: balance;
+}
+h1 .q { color: var(--accent); font-stretch: 75%; }
+.lede { color: var(--muted); max-width: 62ch; margin: 0; }
+
+/* Tabs */
+nav.tabs {
+  display: flex; gap: 4px; margin-top: 22px; border-bottom: 1px solid var(--line);
+  overflow-x: auto; scrollbar-width: none;
+}
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs a {
+  flex: 0 0 auto; text-decoration: none; color: var(--muted);
+  font-family: var(--f-display); font-stretch: 95%; font-weight: 650; font-size: 15px;
+  padding: 10px 14px 11px; border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+nav.tabs a:hover { color: var(--ink); }
+nav.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+nav.tabs a .n { font-family: var(--f-mono); font-size: 11px; color: var(--muted); margin-right: 6px; }
+
+/* Panels */
+main { padding-block: 22px 40px; }
+.panel { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+@media (max-width: 860px) { .panel { grid-template-columns: minmax(0, 1fr); } }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 18px;
+}
+.card + .card { margin-top: 16px; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.col > .card + .card { margin-top: 0; }
+h2 {
+  font-family: var(--f-display); font-stretch: 90%; font-weight: 750; font-size: 20px; margin: 0 0 4px;
+  text-wrap: balance;
+}
+h3 { font-family: var(--f-display); font-weight: 700; font-size: 16px; margin: 0 0 6px; }
+.hint { color: var(--muted); font-size: 13.5px; margin: 0 0 14px; max-width: 64ch; }
+.hint:last-child { margin-bottom: 0; }
+
+/* Course table */
+.thead, .row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 76px 92px 70px 34px; gap: 8px; align-items: center;
+}
+.thead {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  padding: 0 0 6px; border-bottom: 1px solid var(--line);
+}
+.thead .r, .row .qp { text-align: right; }
+.rows { display: flex; flex-direction: column; }
+.row { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.row .qp { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; }
+.row .qp.ex { font-size: 11.5px; letter-spacing: .04em; }
+@media (max-width: 520px) {
+  .thead { display: none; }
+  .row { grid-template-columns: 1fr 1fr 64px 34px; grid-template-areas: "name name name del" "cr gr qp qp"; }
+  .row .c-name { grid-area: name; } .row .c-cr { grid-area: cr; } .row .c-gr { grid-area: gr; }
+  .row .qp { grid-area: qp; } .row .del { grid-area: del; }
+  .row .c-cr::before { content: "Credits"; }
+  .row .c-gr::before { content: "Grade"; }
+  .row .c-cr, .row .c-gr { display: flex; flex-direction: column; gap: 2px; }
+  .row .c-cr::before, .row .c-gr::before { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+}
+
+/* Inputs */
+input, select, button { font: inherit; color: inherit; }
+input[type=text], input[type=number], select {
+  width: 100%; min-width: 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 7px 9px; font-size: 14.5px; line-height: 1.3;
+}
+input[type=number] { -moz-appearance: textfield; }
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--focus); outline-offset: 2px;
+}
+input.invalid { border-color: var(--bad); }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 600; }
+.field .sub { font-size: 12px; color: var(--muted); }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.suffix { position: relative; }
+.suffix input { padding-right: 28px; }
+.suffix::after {
+  content: attr(data-suffix); position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-family: var(--f-mono); font-size: 13px; pointer-events: none;
+}
+
+button.btn {
+  border: 1px solid var(--line); background: var(--surface-2); border-radius: var(--r-sm);
+  padding: 7px 12px; cursor: pointer; font-weight: 600; font-size: 13.5px;
+}
+button.btn:hover { border-color: var(--muted); }
+button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.del {
+  width: 34px; height: 34px; border: 0; background: transparent; color: var(--muted); border-radius: var(--r-sm);
+  cursor: pointer; font-size: 18px; line-height: 1;
+}
+button.del:hover { background: var(--bad-soft); color: var(--bad); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; margin-bottom: 14px; }
+.seg button { border: 0; background: transparent; padding: 7px 12px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+
+.check { display: flex; gap: 9px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+.check input { margin-top: 3px; accent-color: var(--accent); width: 16px; height: 16px; }
+
+/* Result card */
+.result { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 14px); }
+@media (max-width: 860px) { .result { position: static; order: -1; } }
+.result .label {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+}
+.big {
+  font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-weight: 600;
+  font-size: 58px; line-height: 1; letter-spacing: -.03em; margin: 6px 0 2px;
+}
+.big small { font-size: 20px; color: var(--muted); font-weight: 500; letter-spacing: 0; margin-left: 4px; }
+.delta { font-family: var(--f-mono); font-size: 13px; }
+.delta.up { color: var(--good); } .delta.down { color: var(--bad); }
+dl.stats { display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+dl.stats dt { color: var(--muted); font-size: 13.5px; }
+dl.stats dd { margin: 0; font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; font-size: 14px; }
+.chips { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.chip {
+  display: flex; gap: 10px; align-items: flex-start; border-radius: var(--r-sm); padding: 9px 11px; font-size: 13.5px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.chip b { font-weight: 600; }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex: 0 0 auto; background: var(--muted); }
+.chip.good { background: var(--good-soft); border-color: transparent; } .chip.good .dot { background: var(--good); }
+.chip.warn { background: var(--warn-soft); border-color: transparent; } .chip.warn .dot { background: var(--warn); }
+.chip.bad { background: var(--bad-soft); border-color: transparent; } .chip.bad .dot { background: var(--bad); }
+.chip.accent { background: var(--accent-soft); border-color: transparent; } .chip.accent .dot { background: var(--accent); }
+.copyrow { margin-top: 14px; display: flex; gap: 8px; align-items: center; }
+.copied { font-size: 12.5px; color: var(--good); }
+
+/* GPA gauge */
+.gauge { margin-top: 14px; }
+.gauge .track { position: relative; height: 10px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); overflow: visible; }
+.gauge .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: var(--accent); transition: width .25s ease; }
+.gauge .tick { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--muted); opacity: .55; }
+.gauge .ticks { position: relative; height: 16px; margin-top: 4px; font-family: var(--f-mono); font-size: 10.5px; color: var(--muted); }
+.gauge .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.gauge .ticks span.end { transform: translateX(-100%); }
+.gauge .ticks span.start { transform: none; }
+
+/* Tables */
+.tbl-wrap { overflow-x: auto; }
+table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.t th, table.t td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+table.t th { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+table.t td.n, table.t th.n { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+table.t tr.hl td { background: var(--accent-soft); }
+table.t td .pill { font-family: var(--f-mono); font-size: 11.5px; padding: 1px 7px; border-radius: 999px; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+
+.cutoffs { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin-top: 10px; }
+.cutoffs .field label { font-family: var(--f-mono); font-size: 12px; }
+details.more { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+details.more summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+
+.cat-head, .cat { display: grid; grid-template-columns: minmax(0, 1fr) 86px 96px 34px; gap: 8px; align-items: center; }
+.cat-head { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.cat { padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.cat.final input[type=text] { font-weight: 600; }
+.weights-note { font-family: var(--f-mono); font-size: 12.5px; margin-top: 8px; color: var(--muted); }
+.weights-note.off { color: var(--bad); }
+
+/* Reference / FAQ */
+section.ref { padding-block: 10px 30px; border-top: 1px solid var(--line); }
+section.ref h2 { font-size: 26px; margin: 26px 0 14px; }
+.ref-grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 760px) { .ref-grid { grid-template-columns: minmax(0, 1fr); } }
+.faq { display: flex; flex-direction: column; gap: 18px; }
+.faq h3 { font-size: 17px; margin-bottom: 4px; }
+.faq p { margin: 0; max-width: 66ch; color: var(--ink); }
+.faq p + p { margin-top: 8px; }
+.faq a, footer a, .hint a { color: var(--accent); }
+footer { border-top: 1px solid var(--line); padding-block: 18px 34px; color: var(--muted); font-size: 13px; }
+footer p { margin: 0 0 6px; max-width: 80ch; }
+
+.ex-badge {
+  font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent); background: var(--accent-soft); padding: 2px 7px; border-radius: 4px; margin-left: 8px; vertical-align: 2px;
+}
+.panel[hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow"><span>Unofficial</span><span class="tag">Virginia Tech scale</span><span class="tag">QCA = GPA</span></div>
+    <h1>Hokie GPA <span class="q">(QCA)</span> Calculator</h1>
+    <p class="lede">Semester GPA, cumulative GPA, Dean's List and graduation honors, the term GPA you need to hit a goal, and the score you need on your final. Built on VT's plus/minus scale with no A+, where repeated courses count every time.</p>
+    <nav class="tabs" aria-label="Calculators">
+      <a href="#semester" data-tab="semester"><span class="n">01</span>Semester GPA</a>
+      <a href="#cumulative" data-tab="cumulative"><span class="n">02</span>Cumulative</a>
+      <a href="#target" data-tab="target"><span class="n">03</span>Target planner</a>
+      <a href="#final" data-tab="final"><span class="n">04</span>Final grade needed</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- SEMESTER -->
+    <div class="panel" id="p-semester" data-panel="semester">
+      <div class="col">
+        <div class="card">
+          <h2>This semester's courses <span class="ex-badge" id="sem-ex" hidden>Example</span></h2>
+          <p class="hint">Enter credits and the letter grade you got or expect. P and W grades count toward neither hours nor points in your GPA.</p>
+          <div class="thead" aria-hidden="true"><span>Course</span><span>Credits</span><span>Grade</span><span class="r">Points</span><span></span></div>
+          <div class="rows" id="course-rows"></div>
+          <div class="actions">
+            <button class="btn" type="button" id="add-course">+ Add course</button>
+            <button class="btn" type="button" id="clear-courses">Clear all</button>
+          </div>
+        </div>
+      </div>
+      <aside class="card result" aria-live="polite">
+        <div class="label">Semester GPA</div>
+        <div class="big" id="sem-gpa">–</div>
+        <div class="gauge" id="sem-gauge"></div>
+        <dl class="stats">
+          <dt>GPA hours (A–F)</dt><dd id="sem-hours">0</dd>
+          <dt>Quality points</dt><dd id="sem-qp">0.0</dd>
+          <dt>Pass/fail and W hours</dt><dd id="sem-ph">0</dd>
+        </dl>
+        <div class="chips" id="sem-chips"></div>
+        <div class="copyrow"><button class="btn" type="button" data-copy="semester">Copy summary</button><span class="copied" hidden>Copied</span></div>
+      </aside>
+    </div>
+
+    <!-- CUMULATIVE -->
+    <div class="panel" id="p-cumulative" data-panel="cumulative" hidden>
+      <div class="col">
+        <div class="card">
+          <h2>Where you stand now</h2>
+          <p class="hint">Find these on your unofficial transcript in Hokie SPA. Quality points are optional but give an exact answer, since a GPA shown to two decimals is already rounded.</p>
+          <div class="fields">
+            <div class="field"><label for="cum-gpa">Current cumulative GPA</label><input type="number" id="cum-gpa" inputmode="decimal" step="0.001" min="0" max="4" placeholder="3.250"></div>
+            <div class="field"><label for="cum-hours">GPA hours attempted</label><input type="number" id="cum-hours" inputmode="decimal" step="1" min="0" placeholder="45"><span class="sub">Graded A–F hours only, not P/F</span></div>
+            <div class="field"><label for="cum-qp">Quality points <span class="sub">(optional)</span></label><input type="number" id="cum-qp" inputmode="decimal" step="0.1" min="0" placeholder="146.3"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Adding this semester</h2>
+          <label class="check"><input type="checkbox" id="cum-use-sem" checked> <span>Use the courses from the <a href="#semester">Semester GPA</a> tab (<span id="cum-sem-sum" class="mono">0 hrs</span>)</span></label>
+          <div class="fields" id="cum-manual" style="margin-top:14px">
+            <div class="field"><label for="cum-term-gpa">Term GPA</label><input type="number" id="cum-term-gpa" inputmode="decimal" step="0.01" min="0" max="4" placeholder="3.50"></div>
+            <div class="field"><label for="cum-term-hours">Term GPA hours</label><input type="number" id="cum-term-hours" inputmode="decimal" step="1" min="0" placeholder="15"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Grade-by-grade impact</h2>
+          <p class="hint">How one more 3-credit course moves your new cumulative GPA, depending on the grade.</p>
+          <div class="tbl-wrap"><table class="t" id="cum-impact"></table></div>
+        </div>
+      </div>
+      <aside class="card result" aria-live="polite">
+        <div class="label">New cumulative GPA</div>
+        <div class="big" id="cum-out">–</div>
+        <div class="delta" id="cum-delta"></div>
+        <div class="gauge" id="cum-gauge"></div>
+        <dl class="stats">
+          <dt>Total GPA hours</dt><dd id="cum-th">–</dd>
+          <dt>Total quality points</dt><dd id="cum-tqp">–</dd>
+        </dl>
+        <div class="chips" id="cum-chips"></div>
+        <div class="copyrow"><button class="btn" type="button" data-copy="cumulative">Copy summary</button><span class="copied" hidden>Copied</span></div>
+      </aside>
+    </div>
+
+    <!-- TARGET -->
+    <div class="panel" id="p-target" data-panel="target" hidden>
+      <div class="col">
+        <div class="card">
+          <h2>Set a goal</h2>
+          <p class="hint">Works for any cutoff: a 3.0 for a program, 3.4 for distinction, a scholarship minimum, or getting back above 2.0.</p>
+          <div class="fields">
+            <div class="field"><label for="tg-gpa">Current cumulative GPA</label><input type="number" id="tg-gpa" inputmode="decimal" step="0.001" min="0" max="4" placeholder="3.120"></div>
+            <div class="field"><label for="tg-hours">GPA hours so far</label><input type="number" id="tg-hours" inputmode="decimal" step="1" min="0" placeholder="60"></div>
+            <div class="field"><label for="tg-target">Target GPA</label><input type="number" id="tg-target" inputmode="decimal" step="0.01" min="0" max="4" placeholder="3.40"></div>
+            <div class="field"><label for="tg-credits">Credits you'll take next</label><input type="number" id="tg-credits" inputmode="decimal" step="1" min="1" placeholder="15"></div>
+          </div>
+          <div class="actions" id="tg-presets" aria-label="Common targets"></div>
+        </div>
+        <div class="card">
+          <h2>How long it takes</h2>
+          <p class="hint">Term GPA you'd need each semester to reach the target, by how many more credits you take before you need it.</p>
+          <div class="tbl-wrap"><table class="t" id="tg-table"></table></div>
+        </div>
+      </div>
+      <aside class="card result" aria-live="polite">
+        <div class="label">Term GPA needed</div>
+        <div class="big" id="tg-out">–</div>
+        <div class="delta" id="tg-letter"></div>
+        <dl class="stats">
+          <dt>Quality points needed</dt><dd id="tg-qpn">–</dd>
+          <dt>Fewest credits at a 4.0</dt><dd id="tg-min4">–</dd>
+          <dt>Most you can reach next term</dt><dd id="tg-max">–</dd>
+        </dl>
+        <div class="chips" id="tg-chips"></div>
+        <div class="copyrow"><button class="btn" type="button" data-copy="target">Copy summary</button><span class="copied" hidden>Copied</span></div>
+      </aside>
+    </div>
+
+    <!-- FINAL -->
+    <div class="panel" id="p-final" data-panel="final" hidden>
+      <div class="col">
+        <div class="card">
+          <h2>Your course grade</h2>
+          <div class="seg" role="group" aria-label="Input mode">
+            <button type="button" data-mode="simple" aria-pressed="true">I know my current grade</button>
+            <button type="button" data-mode="cats" aria-pressed="false">Use syllabus categories</button>
+          </div>
+          <div id="fin-simple">
+            <div class="fields">
+              <div class="field"><label for="fin-current">Current grade</label><div class="suffix" data-suffix="%"><input type="number" id="fin-current" inputmode="decimal" step="0.01" min="0" max="150" placeholder="86.4"></div></div>
+              <div class="field"><label for="fin-weight">Final is worth</label><div class="suffix" data-suffix="%"><input type="number" id="fin-weight" inputmode="decimal" step="0.5" min="1" max="100" placeholder="25"></div></div>
+            </div>
+          </div>
+          <div id="fin-cats" hidden>
+            <p class="hint">Copy the weights from your syllabus. Leave a score blank if nothing is graded yet; it's assumed to match your current average.</p>
+            <div class="cat-head" aria-hidden="true"><span>Category</span><span>Weight</span><span>Your score</span><span></span></div>
+            <div id="cat-rows"></div>
+            <div class="weights-note" id="cat-note"></div>
+            <div class="actions"><button class="btn" type="button" id="add-cat">+ Add category</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>What you need for each letter</h2>
+          <p class="hint">VT has no university-wide percentage scale; each instructor sets one. The common 93/90/87 scale is filled in below. Change it to match your syllabus.</p>
+          <div class="tbl-wrap"><table class="t" id="fin-table"></table></div>
+          <details class="more">
+            <summary>Edit grade cutoffs</summary>
+            <div class="cutoffs" id="cutoffs"></div>
+            <div class="actions"><button class="btn" type="button" id="reset-cutoffs">Reset to 93/90/87 scale</button></div>
+          </details>
+        </div>
+      </div>
+      <aside class="card result" aria-live="polite">
+        <div class="field" style="margin-bottom:14px">
+          <label for="fin-target">Grade I want</label>
+          <select id="fin-target"></select>
+        </div>
+        <div class="label">You need on the final</div>
+        <div class="big" id="fin-out">–</div>
+        <dl class="stats">
+          <dt>Current grade</dt><dd id="fin-cur">–</dd>
+          <dt>If you get 100%</dt><dd id="fin-100">–</dd>
+          <dt>If you skip it (0%)</dt><dd id="fin-0">–</dd>
+        </dl>
+        <div class="chips" id="fin-chips"></div>
+        <div class="copyrow"><button class="btn" type="button" data-copy="final">Copy summary</button><span class="copied" hidden>Copied</span></div>
+      </aside>
+    </div>
+  </main>
+
+  <section class="ref" id="how-it-works">
+    <h2>How Virginia Tech calculates your GPA</h2>
+    <div class="ref-grid">
+      <div class="card">
+        <h3>VT grade points</h3>
+        <div class="tbl-wrap"><table class="t" id="scale-table"></table></div>
+        <p class="hint" style="margin-top:10px">There is no A+ at Virginia Tech. P, W, and I grades carry no points; an I that isn't finished in time turns into an F.</p>
+      </div>
+      <div class="faq">
+        <div>
+          <h3>Is QCA the same as GPA?</h3>
+          <p>Yes. VT long called it QCA (quality credit average), and many students and advisors still do. The university's grading policy now uses "GPA" throughout, but the math is the same: total quality points divided by GPA hours attempted at VT.</p>
+        </div>
+        <div>
+          <h3>How are quality points figured?</h3>
+          <p>Multiply each course's credits by its grade points. A B+ in a 4-credit course is 4 × 3.3 = 13.2 quality points. Add them up and divide by your A–F graded hours. Pass/fail and continuing (X) courses are left out entirely.</p>
+        </div>
+        <div>
+          <h3>Does retaking a class replace the old grade?</h3>
+          <p>No. VT has no grade replacement. Both attempts count in your GPA. You can only retake a course to raise a C- or lower, and you get three attempts at most. This is the biggest way generic GPA calculators get VT wrong.</p>
+        </div>
+        <div>
+          <h3>What does Dean's List take?</h3>
+          <p>At least 12 credit hours graded A–F in a fall or spring semester and a term GPA of 3.4 or higher. Pass/fail hours don't count toward the 12, and there's no summer Dean's List.</p>
+        </div>
+        <div>
+          <h3>Graduating with distinction</h3>
+          <p>You need at least 60 hours completed at VT and an overall GPA of 3.4 or higher: cum laude from 3.4, magna cum laude from 3.6, summa cum laude from 3.8. The GPA is not rounded for this, so a 3.598 is cum laude, not magna.</p>
+        </div>
+        <div>
+          <h3>Academic standing</h3>
+          <p>A cumulative GPA of 2.0 or higher is good standing. A term GPA under 2.0 with a cumulative still at 2.0 or above puts you on academic warning. A cumulative under 2.0 means academic probation, which is reviewed after each fall and spring. You also need a 2.0 overall to graduate.</p>
+        </div>
+        <div>
+          <h3>Can I take a class pass/fail to protect my GPA?</h3>
+          <p>Only for free electives (not major requirements or Pathways courses), once you have 30 completed hours and at least a 2.5 GPA, with a limit of two per term. A D- or lower becomes an F, which does count.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Unofficial student-made tool. Not affiliated with or endorsed by Virginia Tech. Your official GPA is the one on your transcript in Hokie SPA; check graduation and program requirements with your advisor.</p>
+    <p>Rules from VT <a href="https://www.policies.vt.edu/assets/6800.pdf" target="_blank" rel="noopener">Policy 6800, Undergraduate Grading Policies</a> and the <a href="https://catalog.vt.edu/undergraduate/undergraduate-policies/" target="_blank" rel="noopener">Undergraduate Catalog</a>. Your entries are saved only in this browser.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- VT rules ----------
+  var SCALE = [
+    ["A", 4.0], ["A-", 3.7], ["B+", 3.3], ["B", 3.0], ["B-", 2.7], ["C+", 2.3],
+    ["C", 2.0], ["C-", 1.7], ["D+", 1.3], ["D", 1.0], ["D-", 0.7], ["F", 0.0]
+  ];
+  var POINTS = {}; SCALE.forEach(function (g) { POINTS[g[0]] = g[1]; });
+  var NON_GPA = { "P": "Pass (P/F)", "W": "Withdrew" };
+  var DEFAULT_CUTOFFS = { "A": 93, "A-": 90, "B+": 87, "B": 83, "B-": 80, "C+": 77, "C": 73, "C-": 70, "D+": 67, "D": 63, "D-": 60 };
+
+  // ---------- Pure math ----------
+  function num(v) { if (v === "" || v === null || v === undefined) return NaN; var n = Number(v); return isFinite(n) ? n : NaN; }
+
+  function semesterTotals(courses) {
+    var hours = 0, qp = 0, other = 0, counted = 0;
+    courses.forEach(function (c) {
+      var cr = num(c.credits);
+      if (!(cr > 0) || !c.grade) return;
+      if (POINTS.hasOwnProperty(c.grade)) { hours += cr; qp += cr * POINTS[c.grade]; counted++; }
+      else if (NON_GPA[c.grade]) { other += cr; }
+    });
+    return { hours: hours, qp: qp, gpa: hours > 0 ? qp / hours : NaN, other: other, counted: counted };
+  }
+
+  function priorQP(gpa, hours, qpOverride) {
+    var q = num(qpOverride);
+    if (q >= 0 && !isNaN(q)) return q;
+    if (gpa >= 0 && hours >= 0) return gpa * hours;
+    return NaN;
+  }
+
+  function combine(qp0, h0, qp1, h1) {
+    var h = h0 + h1; return { hours: h, qp: qp0 + qp1, gpa: h > 0 ? (qp0 + qp1) / h : NaN };
+  }
+
+  function standing(cum, term) {
+    if (isNaN(cum)) return null;
+    if (cum < 2) return { cls: "bad", text: "<b>Academic probation.</b> Cumulative GPA is below 2.0. It's lifted once your cumulative reaches 2.0." };
+    if (!isNaN(term) && term < 2) return { cls: "warn", text: "<b>Academic warning.</b> Term GPA under 2.0 with your cumulative still at 2.0 or higher." };
+    return { cls: "good", text: "<b>Good standing.</b> Cumulative GPA is 2.0 or higher." };
+  }
+
+  function distinction(gpa, hours) {
+    if (isNaN(gpa)) return null;
+    var level = gpa >= 3.8 ? "Summa cum laude" : gpa >= 3.6 ? "Magna cum laude" : gpa >= 3.4 ? "Cum laude" : null;
+    var next = gpa < 3.4 ? [3.4, "cum laude"] : gpa < 3.6 ? [3.6, "magna"] : gpa < 3.8 ? [3.8, "summa"] : null;
+    var nextTxt = next ? " " + (next[0] - gpa).toFixed(3) + " below " + next[1] + " (" + next[0].toFixed(1) + ")." : "";
+    if (level) {
+      var hrsNote = hours < 60 ? " You'll also need 60 hours completed at VT." : "";
+      return { cls: "accent", text: "<b>" + level + " pace.</b>" + nextTxt + hrsNote };
+    }
+    return { cls: "", text: "<b>Distinction</b> starts at 3.4." + nextTxt };
+  }
+
+  function neededTermGpa(qp0, h0, target, h1) { return (target * (h0 + h1) - qp0) / h1; }
+  function minCreditsAt4(qp0, h0, target) {
+    if (target >= 4) return Infinity;
+    var need = (target * h0 - qp0) / (4 - target);
+    return need <= 0 ? 0 : Math.ceil(need - 1e-9);
+  }
+
+  // final: categories [{weight, score|blank, isFinal}] -> {contrib, otherW, finalW, current}
+  function finalModel(cats) {
+    var fw = 0, filledW = 0, filledSum = 0, blankW = 0;
+    cats.forEach(function (c) {
+      var w = num(c.weight); if (!(w > 0)) return;
+      if (c.isFinal) { fw += w; return; }
+      var s = num(c.score);
+      if (isNaN(s)) blankW += w; else { filledW += w; filledSum += w * s; }
+    });
+    var current = filledW > 0 ? filledSum / filledW : NaN;
+    var contrib = filledSum + (isNaN(current) ? 0 : blankW * current);
+    return { finalW: fw, totalW: fw + filledW + blankW, current: current, contrib: contrib, blankW: blankW };
+  }
+  function neededOnFinal(m, target) { return (target * m.totalW - m.contrib) / m.finalW; }
+  function gradeWith(m, x) { return (m.contrib + m.finalW * x) / m.totalW; }
+
+  function letterFor(gpa) {
+    if (isNaN(gpa)) return "";
+    for (var i = 0; i < SCALE.length; i++) { if (gpa >= SCALE[i][1] - 1e-9) return SCALE[i][0]; }
+    return "F";
+  }
+  function letterForPct(p, cut) {
+    var keys = Object.keys(DEFAULT_CUTOFFS);
+    for (var i = 0; i < keys.length; i++) { if (p >= cut[keys[i]] - 1e-9) return keys[i]; }
+    return "F";
+  }
+
+  // expose for testing in node
+  if (typeof window === "undefined" || window.__TEST__) {
+    var api = { semesterTotals: semesterTotals, priorQP: priorQP, combine: combine, standing: standing, distinction: distinction,
+      neededTermGpa: neededTermGpa, minCreditsAt4: minCreditsAt4, finalModel: finalModel, neededOnFinal: neededOnFinal, gradeWith: gradeWith, letterFor: letterFor };
+    if (typeof module !== "undefined") module.exports = api;
+    if (typeof window !== "undefined") window.__API__ = api;
+    if (typeof document === "undefined") return;
+  }
+
+  // ---------- Formatting ----------
+  function f3(n) { return isNaN(n) || !isFinite(n) ? "–" : n.toFixed(3); }
+  function f2(n) { return isNaN(n) || !isFinite(n) ? "–" : n.toFixed(2); }
+  function f1(n) { return isNaN(n) || !isFinite(n) ? "–" : n.toFixed(1); }
+  function hrs(n) { return (Math.round(n * 10) / 10) + (n === 1 ? " hr" : " hrs"); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function $(id) { return document.getElementById(id); }
+
+  // ---------- State ----------
+  var KEY = "hokie-gpa-v1";
+  var EXAMPLE_COURSES = [
+    { name: "ENGL 1105 First-Year Writing", credits: 3, grade: "A-" },
+    { name: "MATH 1225 Calculus of a Single Variable", credits: 4, grade: "B+" },
+    { name: "PHYS 2305 Foundations of Physics", credits: 4, grade: "B" },
+    { name: "PSCI 1014 Intro to U.S. Government", credits: 3, grade: "A" },
+    { name: "HIST 1115 Intro to History", credits: 3, grade: "B+" }
+  ];
+  var state = {
+    example: true,
+    courses: EXAMPLE_COURSES.map(function (c) { return Object.assign({}, c); }),
+    cum: { gpa: "3.250", hours: "45", qp: "", useSem: true, termGpa: "", termHours: "" },
+    tg: { gpa: "3.180", hours: "45", target: "3.30", credits: "15" },
+    fin: {
+      mode: "simple", current: "86.4", weight: "25", target: "B+",
+      cats: [
+        { name: "Homework", weight: "20", score: "94" },
+        { name: "Quizzes", weight: "15", score: "81" },
+        { name: "Midterm exams", weight: "35", score: "84.5" },
+        { name: "Final exam", weight: "30", score: "", isFinal: true }
+      ],
+      cutoffs: Object.assign({}, DEFAULT_CUTOFFS)
+    }
+  };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && saved.courses) {
+      state = Object.assign(state, saved);
+      state.fin = Object.assign({}, state.fin, saved.fin || {});
+      state.fin.cutoffs = Object.assign({}, DEFAULT_CUTOFFS, (saved.fin || {}).cutoffs || {});
+    }
+  } catch (e) { /* storage unavailable */ }
+  var saveTimer;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }, 200);
+  }
+
+  // ---------- Gauge ----------
+  function gauge(el, gpa, marks) {
+    var pct = isNaN(gpa) ? 0 : Math.max(0, Math.min(1, gpa / 4)) * 100;
+    var ticks = marks.map(function (m) { return '<span class="tick" style="left:' + (m[0] / 4 * 100) + '%"></span>'; }).join("");
+    var labels = '<span class="start" style="left:0">0.0</span>' + marks.filter(function (m) { return m[0] < 3.7; }).map(function (m) {
+      return '<span style="left:' + (m[0] / 4 * 100) + '%">' + m[1] + '</span>';
+    }).join("") + '<span class="end" style="left:100%">4.0</span>';
+    el.innerHTML = '<div class="track"><div class="fill" style="width:' + pct + '%"></div>' + ticks + '</div><div class="ticks">' + labels + '</div>';
+  }
+  var MARKS = [[2.0, "2.0"], [3.0, "3.0"], [3.4, "3.4"], [3.8, "3.8"]];
+
+  function chips(el, list) {
+    el.innerHTML = list.filter(Boolean).map(function (c) {
+      return '<div class="chip ' + (c.cls || "") + '"><span class="dot"></span><span>' + c.text + '</span></div>';
+    }).join("");
+  }
+
+  // ---------- Semester ----------
+  var gradeOptions = '<option value="">–</option>' + SCALE.map(function (g) {
+    return '<option value="' + g[0] + '">' + g[0] + ' · ' + g[1].toFixed(1) + '</option>';
+  }).join("") + Object.keys(NON_GPA).map(function (k) { return '<option value="' + k + '">' + NON_GPA[k] + '</option>'; }).join("");
+
+  function renderCourseRows() {
+    var host = $("course-rows");
+    host.innerHTML = state.courses.map(function (c, i) {
+      return '<div class="row" data-i="' + i + '">' +
+        '<div class="c-name"><input type="text" id="c-name-' + i + '" aria-label="Course name" data-f="name" placeholder="Course (optional)" value="' + esc(c.name || "") + '"></div>' +
+        '<label class="c-cr"><input type="number" id="c-cr-' + i + '" aria-label="Credits" data-f="credits" inputmode="decimal" min="0" max="19" step="0.5" placeholder="3" value="' + esc(c.credits === "" || c.credits == null ? "" : c.credits) + '"></label>' +
+        '<label class="c-gr"><select id="c-gr-' + i + '" aria-label="Grade" data-f="grade">' + gradeOptions + '</select></label>' +
+        '<span class="qp" id="c-qp-' + i + '"></span>' +
+        '<button type="button" class="del" aria-label="Remove course" data-del="' + i + '">×</button>' +
+        '</div>';
+    }).join("");
+    state.courses.forEach(function (c, i) { $("c-gr-" + i).value = c.grade || ""; });
+  }
+
+  function updateSemester() {
+    var t = semesterTotals(state.courses);
+    state.courses.forEach(function (c, i) {
+      var el = $("c-qp-" + i); if (!el) return;
+      var cr = num(c.credits);
+      el.className = "qp";
+      if (cr > 0 && POINTS.hasOwnProperty(c.grade)) el.textContent = (cr * POINTS[c.grade]).toFixed(1);
+      else if (cr > 0 && NON_GPA[c.grade]) { el.textContent = "not counted"; el.className = "qp ex"; }
+      else el.textContent = "";
+    });
+    $("sem-ex").hidden = !state.example;
+    $("sem-gpa").innerHTML = isNaN(t.gpa) ? "–" : f3(t.gpa) + '<small>' + letterFor(t.gpa) + '</small>';
+    $("sem-hours").textContent = t.hours;
+    $("sem-qp").textContent = t.qp.toFixed(1);
+    $("sem-ph").textContent = t.other;
+    gauge($("sem-gauge"), t.gpa, MARKS);
+
+    var list = [];
+    if (t.hours > 0) {
+      if (t.hours >= 12 && t.gpa >= 3.4) list.push({ cls: "good", text: "<b>Dean's List.</b> 12+ A–F hours and a term GPA of 3.4 or higher (fall and spring only)." });
+      else if (t.hours < 12) list.push({ cls: "", text: "<b>Not Dean's List eligible:</b> needs 12 hours graded A–F; you have " + t.hours + "." + (t.other ? " P/F hours don't count." : "") });
+      else {
+        var gap = 3.4 * t.hours - t.qp;
+        list.push({ cls: "", text: "<b>Dean's List</b> needs a 3.4. You're " + gap.toFixed(1) + " quality points short. For scale, a 3-credit B moving up to an A- adds 2.1." });
+      }
+      if (t.gpa < 2) list.push({ cls: "warn", text: "<b>Below 2.0 for the term.</b> That triggers academic warning, or probation if your cumulative drops under 2.0." });
+    } else {
+      list.push({ cls: "", text: "Add credits and grades to see your GPA." });
+    }
+    chips($("sem-chips"), list);
+    updateCumulative();
+  }
+
+  $("course-rows").addEventListener("input", onCourseEdit);
+  $("course-rows").addEventListener("change", onCourseEdit);
+  function onCourseEdit(e) {
+    var row = e.target.closest(".row"); if (!row) return;
+    var i = +row.dataset.i, f = e.target.dataset.f; if (!f) return;
+    state.courses[i][f] = e.target.value;
+    state.example = false;
+    updateSemester(); save();
+  }
+  $("course-rows").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-del]"); if (!b) return;
+    state.courses.splice(+b.dataset.del, 1);
+    if (!state.courses.length) state.courses.push({ name: "", credits: "", grade: "" });
+    state.example = false;
+    renderCourseRows(); updateSemester(); save();
+  });
+  $("add-course").addEventListener("click", function () {
+    state.courses.push({ name: "", credits: 3, grade: "" });
+    renderCourseRows(); updateSemester(); save();
+    var last = state.courses.length - 1; var el = $("c-name-" + last); if (el) el.focus();
+  });
+  $("clear-courses").addEventListener("click", function () {
+    state.courses = [{ name: "", credits: "", grade: "" }, { name: "", credits: "", grade: "" }, { name: "", credits: "", grade: "" }];
+    state.example = false;
+    renderCourseRows(); updateSemester(); save();
+  });
+
+  // ---------- Cumulative ----------
+  function bindInputs(map, obj) {
+    Object.keys(map).forEach(function (id) {
+      var el = $(id), key = map[id];
+      if (el.type === "checkbox") el.checked = !!obj[key]; else el.value = obj[key] == null ? "" : obj[key];
+      el.addEventListener(el.type === "checkbox" ? "change" : "input", function () {
+        obj[key] = el.type === "checkbox" ? el.checked : el.value;
+        validate(el);
+        save(); updateAll();
+      });
+      validate(el);
+    });
+  }
+  function validate(el) {
+    if (el.type !== "number") return;
+    var v = num(el.value), bad = el.value !== "" && (isNaN(v) || (el.min !== "" && v < +el.min) || (el.max !== "" && v > +el.max));
+    el.classList.toggle("invalid", bad);
+    el.setAttribute("aria-invalid", bad ? "true" : "false");
+  }
+
+  function termContribution() {
+    if (state.cum.useSem) { var t = semesterTotals(state.courses); return { hours: t.hours, qp: t.qp, gpa: t.gpa }; }
+    var g = num(state.cum.termGpa), h = num(state.cum.termHours);
+    if (g >= 0 && g <= 4 && h > 0) return { hours: h, qp: g * h, gpa: g };
+    return { hours: 0, qp: 0, gpa: NaN };
+  }
+
+  var lastCum = null;
+  function updateCumulative() {
+    var c = state.cum;
+    var t = semesterTotals(state.courses);
+    $("cum-sem-sum").textContent = hrs(t.hours) + (isNaN(t.gpa) ? "" : ", " + f3(t.gpa));
+    $("cum-manual").hidden = !!c.useSem;
+    var g0 = num(c.gpa), h0 = num(c.hours);
+    var qp0 = priorQP(g0, h0, c.qp);
+    var term = termContribution();
+    var ok = !isNaN(qp0) && h0 >= 0;
+    var r = ok ? combine(qp0, h0, term.qp, term.hours) : { gpa: NaN, hours: NaN, qp: NaN };
+    lastCum = { r: r, g0: qp0 / h0, h0: h0, term: term };
+
+    $("cum-out").innerHTML = isNaN(r.gpa) ? "–" : f3(r.gpa) + '<small>' + letterFor(r.gpa) + '</small>';
+    var before = h0 > 0 ? qp0 / h0 : NaN;
+    var d = r.gpa - before;
+    var dEl = $("cum-delta");
+    if (!isNaN(d) && term.hours > 0) {
+      dEl.textContent = (d >= 0 ? "▲ +" : "▼ ") + d.toFixed(3) + " from " + f3(before);
+      dEl.className = "delta " + (d > 0.0005 ? "up" : d < -0.0005 ? "down" : "");
+    } else { dEl.textContent = ""; dEl.className = "delta"; }
+    $("cum-th").textContent = isNaN(r.hours) ? "–" : r.hours;
+    $("cum-tqp").textContent = isNaN(r.qp) ? "–" : r.qp.toFixed(1);
+    gauge($("cum-gauge"), r.gpa, MARKS);
+
+    var list = [];
+    if (!isNaN(r.gpa)) {
+      list.push(standing(r.gpa, term.gpa));
+      list.push(distinction(r.gpa, r.hours));
+      if (num(c.qp) >= 0 && g0 >= 0 && h0 > 0 && Math.abs(num(c.qp) / h0 - g0) > 0.006)
+        list.push({ cls: "warn", text: "<b>Check your entries.</b> Quality points ÷ hours = " + f3(num(c.qp) / h0) + ", which doesn't match the GPA you typed. Using quality points." });
+    } else list.push({ cls: "", text: "Enter your current GPA and hours to see the new cumulative." });
+    chips($("cum-chips"), list);
+
+    // impact table
+    var tbl = $("cum-impact");
+    if (!isNaN(r.gpa)) {
+      var rows = SCALE.filter(function (g) { return ["A", "A-", "B+", "B", "C", "D", "F"].indexOf(g[0]) > -1; }).map(function (g) {
+        var n = combine(r.qp, r.hours, 3 * g[1], 3);
+        var dd = n.gpa - r.gpa;
+        return '<tr><td>' + g[0] + '</td><td class="n">' + f3(n.gpa) + '</td><td class="n">' + (dd >= 0 ? "+" : "") + dd.toFixed(3) + '</td></tr>';
+      }).join("");
+      tbl.innerHTML = '<thead><tr><th>Grade in 3 cr</th><th class="n">New GPA</th><th class="n">Change</th></tr></thead><tbody>' + rows + '</tbody>';
+    } else tbl.innerHTML = '<tbody><tr><td class="hint">Fill in your current GPA and hours first.</td></tr></tbody>';
+  }
+
+  // ---------- Target ----------
+  function updateTarget() {
+    var s = state.tg;
+    var g0 = num(s.gpa), h0 = num(s.hours), T = num(s.target), h1 = num(s.credits);
+    var qp0 = g0 * h0;
+    var valid = g0 >= 0 && g0 <= 4 && h0 >= 0 && T >= 0 && T <= 4 && h1 > 0;
+    var need = valid ? neededTermGpa(qp0, h0, T, h1) : NaN;
+    var out = $("tg-out"), list = [];
+
+    if (!valid) { out.textContent = "–"; $("tg-letter").textContent = ""; }
+    else if (need <= 0) { out.innerHTML = "0.000"; $("tg-letter").textContent = "You're already above the target"; }
+    else if (need > 4) { out.innerHTML = '<span style="color:var(--bad)">' + f3(need) + '</span>'; $("tg-letter").textContent = "Not reachable in " + hrs(h1); }
+    else { out.innerHTML = f3(need) + '<small>' + letterFor(need) + '</small>'; $("tg-letter").textContent = "about a" + (/^[AF]/.test(letterFor(need)) ? "n " : " ") + letterFor(need) + " average or better across " + hrs(h1); }
+    $("tg-letter").className = "delta";
+
+    $("tg-qpn").textContent = valid ? Math.max(0, T * (h0 + h1) - qp0).toFixed(1) + " of " + (4 * h1).toFixed(0) : "–";
+    var m4 = valid ? minCreditsAt4(qp0, h0, T) : NaN;
+    $("tg-min4").textContent = !valid ? "–" : m4 === Infinity ? "not possible" : m4 === 0 ? "already there" : hrs(m4);
+    $("tg-max").textContent = valid ? f3(combine(qp0, h0, 4 * h1, h1).gpa) : "–";
+
+    if (valid) {
+      if (need > 4) list.push({ cls: "bad", text: "<b>Out of reach this term.</b> Even straight A's in " + hrs(h1) + " gets you to " + f3(combine(qp0, h0, 4 * h1, h1).gpa) + ". See the table for how many credits it takes." });
+      else if (need <= 0) list.push(null);
+      else if (need > 3.7) list.push({ cls: "warn", text: "<b>Tight.</b> You'd need mostly A's. Spreading it over two semesters is easier; check the table." });
+      else list.push({ cls: "good", text: "<b>Doable.</b> Keep a " + f3(need) + " or better next term." });
+      if (h0 + h1 > 0 && T >= 3.4) list.push({ cls: "", text: "Graduating with distinction also needs 60 hours completed at VT, and the GPA isn't rounded up." });
+    }
+    // fix: "already there" floor
+    if (valid && need <= 0) {
+      var floor = (T * (h0 + h1) - qp0) / h1; // negative -> any term GPA works down to max(0, floor)
+      list[0] = { cls: "good", text: "<b>Already there.</b> Even a " + f2(Math.max(0, floor)) + " term GPA keeps you at " + f2(T) + " or above." };
+    }
+    chips($("tg-chips"), list);
+
+    var tbl = $("tg-table");
+    if (valid) {
+      var plans = [12, 15, 18, 30, 45, 60];
+      tbl.innerHTML = '<thead><tr><th>Next credits</th><th>About</th><th class="n">Term GPA needed</th><th></th></tr></thead><tbody>' +
+        plans.map(function (c) {
+          var n = neededTermGpa(qp0, h0, T, c);
+          var pill = n <= 0 ? '<span class="pill good">already there</span>' : n > 4 ? '<span class="pill bad">not possible</span>' : n > 3.7 ? '<span class="pill warn">mostly A\'s</span>' : '<span class="pill good">' + letterFor(n) + ' avg</span>';
+          var sem = c <= 18 ? "1 semester" : (c / 15) + " semesters";
+          return '<tr' + (c === h1 ? ' class="hl"' : '') + '><td class="n" style="text-align:left">' + c + '</td><td>' + sem + '</td><td class="n">' + (n <= 0 ? "–" : f3(n)) + '</td><td>' + pill + '</td></tr>';
+        }).join("") + '</tbody>';
+    } else tbl.innerHTML = '<tbody><tr><td class="hint">Fill in all four fields.</td></tr></tbody>';
+  }
+
+  var presets = [["2.0", "Good standing"], ["2.5", "P/F eligibility"], ["3.0", "3.0"], ["3.4", "Cum laude"], ["3.6", "Magna"], ["3.8", "Summa"]];
+  $("tg-presets").innerHTML = presets.map(function (p) { return '<button class="btn" type="button" data-target="' + p[0] + '">' + p[1] + (p[1] === p[0] ? "" : " " + p[0]) + '</button>'; }).join("");
+  $("tg-presets").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-target]"); if (!b) return;
+    state.tg.target = b.dataset.target; $("tg-target").value = b.dataset.target; save(); updateTarget();
+  });
+
+  // ---------- Final ----------
+  function renderCats() {
+    $("cat-rows").innerHTML = state.fin.cats.map(function (c, i) {
+      return '<div class="cat' + (c.isFinal ? " final" : "") + '" data-i="' + i + '">' +
+        '<input type="text" id="cat-n-' + i + '" aria-label="Category" data-f="name" value="' + esc(c.name || "") + '" placeholder="Category">' +
+        '<div class="suffix" data-suffix="%"><input type="number" id="cat-w-' + i + '" aria-label="Weight" data-f="weight" inputmode="decimal" min="0" max="100" step="0.5" value="' + esc(c.weight) + '"></div>' +
+        (c.isFinal ? '<span class="hint" style="margin:0;font-size:12.5px">solving for this</span>' :
+          '<div class="suffix" data-suffix="%"><input type="number" id="cat-s-' + i + '" aria-label="Score" data-f="score" inputmode="decimal" min="0" max="150" step="0.1" placeholder="blank" value="' + esc(c.score) + '"></div>') +
+        (c.isFinal ? '<span></span>' : '<button type="button" class="del" aria-label="Remove category" data-del="' + i + '">×</button>') +
+        '</div>';
+    }).join("");
+  }
+  $("cat-rows").addEventListener("input", function (e) {
+    var row = e.target.closest(".cat"); if (!row) return;
+    state.fin.cats[+row.dataset.i][e.target.dataset.f] = e.target.value; save(); updateFinal();
+  });
+  $("cat-rows").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-del]"); if (!b) return;
+    state.fin.cats.splice(+b.dataset.del, 1); renderCats(); save(); updateFinal();
+  });
+  $("add-cat").addEventListener("click", function () {
+    var fi = state.fin.cats.findIndex(function (c) { return c.isFinal; });
+    state.fin.cats.splice(fi < 0 ? state.fin.cats.length : fi, 0, { name: "", weight: "", score: "" });
+    renderCats(); save(); updateFinal();
+  });
+
+  document.querySelectorAll(".seg [data-mode]").forEach(function (b) {
+    b.addEventListener("click", function () { state.fin.mode = b.dataset.mode; save(); syncMode(); updateFinal(); });
+  });
+  function syncMode() {
+    document.querySelectorAll(".seg [data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === state.fin.mode)); });
+    $("fin-simple").hidden = state.fin.mode !== "simple";
+    $("fin-cats").hidden = state.fin.mode !== "cats";
+  }
+
+  function renderCutoffs() {
+    var cut = state.fin.cutoffs;
+    $("cutoffs").innerHTML = Object.keys(DEFAULT_CUTOFFS).map(function (k) {
+      return '<div class="field"><label for="cut-' + k.replace("+", "p").replace("-", "m") + '">' + k + ' ≥</label>' +
+        '<input type="number" id="cut-' + k.replace("+", "p").replace("-", "m") + '" data-k="' + k + '" inputmode="decimal" step="0.5" min="0" max="100" value="' + esc(cut[k]) + '"></div>';
+    }).join("");
+    var sel = $("fin-target");
+    sel.innerHTML = Object.keys(DEFAULT_CUTOFFS).map(function (k) { return '<option value="' + k + '">' + k + ' (' + cut[k] + '%)</option>'; }).join("");
+    sel.value = state.fin.target;
+  }
+  $("cutoffs").addEventListener("input", function (e) {
+    var k = e.target.dataset.k; if (!k) return;
+    state.fin.cutoffs[k] = e.target.value;
+    var sel = $("fin-target"); var opt = sel.querySelector('option[value="' + k + '"]'); if (opt) opt.textContent = k + " (" + e.target.value + "%)";
+    save(); updateFinal();
+  });
+  $("reset-cutoffs").addEventListener("click", function () { state.fin.cutoffs = Object.assign({}, DEFAULT_CUTOFFS); renderCutoffs(); save(); updateFinal(); });
+  $("fin-target").addEventListener("change", function (e) { state.fin.target = e.target.value; save(); updateFinal(); });
+
+  function finModelNow() {
+    var f = state.fin;
+    if (f.mode === "simple") {
+      var cur = num(f.current), w = num(f.weight);
+      if (isNaN(cur) || !(w > 0 && w <= 100)) return null;
+      return finalModel([{ weight: 100 - w, score: cur }, { weight: w, isFinal: true }]);
+    }
+    var m = finalModel(f.cats);
+    if (!(m.finalW > 0) || isNaN(m.current)) return Object.assign(m, { invalid: true });
+    return m;
+  }
+
+  function updateFinal() {
+    var f = state.fin, cut = f.cutoffs;
+    var m = finModelNow();
+    // category weight note
+    if (f.mode === "cats") {
+      var mm = finalModel(f.cats);
+      var note = $("cat-note");
+      var tw = Math.round(mm.totalW * 100) / 100;
+      note.textContent = "Weights total " + tw + "%" + (tw !== 100 ? ". They should add to 100%; results are scaled to the total." : "") + (isNaN(mm.current) ? "" : "  ·  Current average " + f2(mm.current) + "%");
+      note.className = "weights-note" + (tw !== 100 ? " off" : "");
+    }
+    var list = [];
+    var tgt = num(cut[f.target]);
+    if (!m || m.invalid) {
+      $("fin-out").textContent = "–"; $("fin-cur").textContent = "–"; $("fin-100").textContent = "–"; $("fin-0").textContent = "–";
+      list.push({ cls: "", text: f.mode === "simple" ? "Enter your current grade and the final's weight." : "Give the final a weight and enter at least one score." });
+      chips($("fin-chips"), list);
+      $("fin-table").innerHTML = '<tbody><tr><td class="hint">Waiting on your grade info.</td></tr></tbody>';
+      return;
+    }
+    var need = neededOnFinal(m, tgt);
+    var hi = gradeWith(m, 100), lo = gradeWith(m, 0);
+    var out = $("fin-out");
+    if (isNaN(tgt)) out.textContent = "–";
+    else if (need > 100) out.innerHTML = '<span style="color:var(--bad)">' + f1(need) + '%</span>';
+    else if (need <= 0) out.innerHTML = '0%<small>locked in</small>';
+    else out.innerHTML = f1(need) + '%';
+    $("fin-cur").textContent = f2(m.current) + "% (" + letterForPct(m.current, cut) + ")";
+    $("fin-100").textContent = f2(hi) + "% (" + letterForPct(hi, cut) + ")";
+    $("fin-0").textContent = f2(lo) + "% (" + letterForPct(lo, cut) + ")";
+
+    if (need > 100) list.push({ cls: "bad", text: "<b>Not possible with the final alone.</b> A perfect score gets you " + f2(hi) + "%, a " + letterForPct(hi, cut) + ". Ask about extra credit or curves." });
+    else if (need <= 0) list.push({ cls: "good", text: "<b>Locked in.</b> You'll keep at least " + f.target + " even with a zero on the final." });
+    else if (need > 95) list.push({ cls: "warn", text: "<b>Very hard.</b> You'd need " + f1(need) + "%. Aim for it, and know the next grade down is " + f1(neededOnFinal(m, num(cut[nextDown(f.target)]))) + "%." });
+    else list.push({ cls: "good", text: "<b>" + f1(need) + "% on the final</b> gets you " + (/^[AF]/.test(f.target) ? "an " : "a ") + f.target + " (" + cut[f.target] + "%)." });
+    if (m.blankW > 0) list.push({ cls: "", text: m.blankW + "% of your grade has no score yet; it's assumed to match your current " + f2(m.current) + "% average." });
+    list.push({ cls: "", text: "Your letter maps to " + POINTS[f.target].toFixed(1) + " grade points at VT." });
+    chips($("fin-chips"), list);
+
+    var rows = Object.keys(DEFAULT_CUTOFFS).map(function (k) {
+      var n = neededOnFinal(m, num(cut[k]));
+      var pill = n <= 0 ? '<span class="pill good">locked in</span>' : n > 100 ? '<span class="pill bad">out of reach</span>' : n > 90 ? '<span class="pill warn">' + f1(n) + '%</span>' : '<span class="pill good">' + f1(n) + '%</span>';
+      return '<tr' + (k === f.target ? ' class="hl"' : '') + '><td><b>' + k + '</b></td><td class="n">' + cut[k] + '%</td><td class="n">' + POINTS[k].toFixed(1) + '</td><td class="n">' + pill + '</td></tr>';
+    }).join("");
+    $("fin-table").innerHTML = '<thead><tr><th>Letter</th><th class="n">Cutoff</th><th class="n">Pts</th><th class="n">Need on final</th></tr></thead><tbody>' + rows + '</tbody>';
+  }
+  function nextDown(k) { var ks = Object.keys(DEFAULT_CUTOFFS); var i = ks.indexOf(k); return ks[Math.min(i + 1, ks.length - 1)]; }
+
+  // ---------- Copy summaries ----------
+  function summary(which) {
+    if (which === "semester") {
+      var t = semesterTotals(state.courses);
+      var lines = state.courses.filter(function (c) { return num(c.credits) > 0 && c.grade; }).map(function (c) {
+        return "  " + (c.name || "Course") + " — " + c.credits + " cr, " + c.grade;
+      });
+      return "Semester GPA: " + f3(t.gpa) + " (" + t.hours + " GPA hrs, " + t.qp.toFixed(1) + " quality pts)\n" + lines.join("\n");
+    }
+    if (which === "cumulative" && lastCum) return "New cumulative GPA: " + f3(lastCum.r.gpa) + " over " + lastCum.r.hours + " hrs (was " + f3(lastCum.g0) + ")";
+    if (which === "target") return "To reach a " + state.tg.target + " GPA from " + state.tg.gpa + " over " + state.tg.hours + " hrs, I need a " + $("tg-out").textContent.replace(/[A-F][+-]?$/, "") + " term GPA in " + state.tg.credits + " credits.";
+    if (which === "final") return "I need " + $("fin-out").textContent + " on the final for a " + state.fin.target + ". Current grade: " + $("fin-cur").textContent + ".";
+    return "";
+  }
+  document.querySelectorAll("[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var txt = summary(b.dataset.copy), msg = b.nextElementSibling;
+      function done(ok) { msg.textContent = ok ? "Copied" : "Copy blocked; select the numbers instead"; msg.hidden = false; setTimeout(function () { msg.hidden = true; }, 2200); }
+      try { navigator.clipboard.writeText(txt).then(function () { done(true); }, function () { done(false); }); } catch (e) { done(false); }
+    });
+  });
+
+  // ---------- Reference table ----------
+  $("scale-table").innerHTML = '<thead><tr><th>Grade</th><th class="n">Points</th><th class="n">× 3 cr</th></tr></thead><tbody>' +
+    SCALE.map(function (g) { return '<tr><td>' + g[0] + '</td><td class="n">' + g[1].toFixed(1) + '</td><td class="n">' + (g[1] * 3).toFixed(1) + '</td></tr>'; }).join("") + '</tbody>';
+
+  // ---------- Tabs ----------
+  var TABS = ["semester", "cumulative", "target", "final"];
+  function showTab(forced) {
+    var h = typeof forced === "string" ? forced : (location.hash || "").slice(1);
+    var tab = TABS.indexOf(h) > -1 ? h : "semester";
+    document.querySelectorAll("[data-panel]").forEach(function (p) { p.hidden = p.dataset.panel !== tab; });
+    document.querySelectorAll("nav.tabs a").forEach(function (a) {
+      if (a.dataset.tab === tab) {
+        a.setAttribute("aria-current", "page");
+        var nav = a.parentNode; nav.scrollLeft = Math.max(0, a.offsetLeft - nav.offsetLeft - 16);
+      } else a.removeAttribute("aria-current");
+    });
+  }
+  window.addEventListener("hashchange", function () { showTab(); });
+  // Switch tabs directly on click; some hosts block or ignore hash navigation.
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest('a[href^="#"]'); if (!a) return;
+    var tab = a.getAttribute("href").slice(1);
+    if (TABS.indexOf(tab) < 0) return;
+    e.preventDefault();
+    showTab(tab);
+    try { history.replaceState(null, "", "#" + tab); } catch (err) { /* host may block URL changes */ }
+    if (a.closest("nav.tabs") === null) document.querySelector("nav.tabs").scrollIntoView({ block: "start" });
+  });
+
+  function updateAll() { updateSemester(); updateTarget(); updateFinal(); }
+
+  // ---------- Boot ----------
+  renderCourseRows();
+  bindInputs({ "cum-gpa": "gpa", "cum-hours": "hours", "cum-qp": "qp", "cum-use-sem": "useSem", "cum-term-gpa": "termGpa", "cum-term-hours": "termHours" }, state.cum);
+  bindInputs({ "tg-gpa": "gpa", "tg-hours": "hours", "tg-target": "target", "tg-credits": "credits" }, state.tg);
+  bindInputs({ "fin-current": "current", "fin-weight": "weight" }, state.fin);
+  renderCats(); renderCutoffs(); syncMode();
+  showTab(); updateAll();
+})();
+</script>
